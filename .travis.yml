@@ -1,0 +1,118 @@
+##########
+# This is .travis.yml configuration file specifically for master and develop branch.
+# The travis job should contains only unit and integration tests.
+#
+# To avoid this file from being overwritten by .travis.yml from other branches,
+# please add the following to your local git config:
+#   git config merge.ours.driver true
+##########
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+branches:
+  except:
+    - livedoc
+
+language: scala
+
+jdk:
+  - oraclejdk8
+
+services:
+  - docker
+
+sudo: required
+
+cache: false
+
+env:
+  matrix:
+    - BUILD_TYPE=Unit
+      METADATA_REP=PGSQL EVENTDATA_REP=PGSQL MODELDATA_REP=PGSQL
+      PIO_SCALA_VERSION=2.10.6
+      PIO_SPARK_VERSION=1.6.3
+    - BUILD_TYPE=Integration
+      METADATA_REP=PGSQL EVENTDATA_REP=PGSQL MODELDATA_REP=PGSQL
+      PIO_SCALA_VERSION=2.10.6
+      PIO_SPARK_VERSION=1.6.3
+    - BUILD_TYPE=Integration
+      METADATA_REP=ELASTICSEARCH EVENTDATA_REP=HBASE MODELDATA_REP=LOCALFS
+      PIO_SCALA_VERSION=2.10.6
+      PIO_SPARK_VERSION=1.6.3
+      PIO_ELASTICSEARCH_VERSION=5.2.2
+    - BUILD_TYPE=Integration
+      METADATA_REP=ELASTICSEARCH EVENTDATA_REP=PGSQL MODELDATA_REP=HDFS
+      PIO_SCALA_VERSION=2.10.6
+      PIO_SPARK_VERSION=1.6.3
+      PIO_ELASTICSEARCH_VERSION=5.2.2
+    - BUILD_TYPE=Integration
+      METADATA_REP=ELASTICSEARCH EVENTDATA_REP=HBASE MODELDATA_REP=LOCALFS
+      PIO_SCALA_VERSION=2.10.6
+      PIO_SPARK_VERSION=1.6.3
+      PIO_ELASTICSEARCH_VERSION=1.7.3
+    - BUILD_TYPE=Integration
+      METADATA_REP=ELASTICSEARCH EVENTDATA_REP=PGSQL MODELDATA_REP=HDFS
+      PIO_SCALA_VERSION=2.10.6
+      PIO_SPARK_VERSION=1.6.3
+      PIO_ELASTICSEARCH_VERSION=1.7.3
+
+    - BUILD_TYPE=Unit
+      METADATA_REP=PGSQL EVENTDATA_REP=PGSQL MODELDATA_REP=PGSQL
+      PIO_SCALA_VERSION=2.11.8
+      PIO_SPARK_VERSION=2.1.0
+    - BUILD_TYPE=Integration
+      METADATA_REP=PGSQL EVENTDATA_REP=PGSQL MODELDATA_REP=PGSQL
+      PIO_SCALA_VERSION=2.11.8
+      PIO_SPARK_VERSION=2.1.0
+    - BUILD_TYPE=Integration
+      METADATA_REP=ELASTICSEARCH EVENTDATA_REP=HBASE MODELDATA_REP=LOCALFS
+      PIO_SCALA_VERSION=2.11.8
+      PIO_SPARK_VERSION=2.1.0
+      PIO_ELASTICSEARCH_VERSION=5.2.2
+    - BUILD_TYPE=Integration
+      METADATA_REP=ELASTICSEARCH EVENTDATA_REP=PGSQL MODELDATA_REP=HDFS
+      PIO_SCALA_VERSION=2.11.8
+      PIO_SPARK_VERSION=2.1.0
+      PIO_ELASTICSEARCH_VERSION=5.2.2
+    - BUILD_TYPE=Integration
+      METADATA_REP=ELASTICSEARCH EVENTDATA_REP=HBASE MODELDATA_REP=LOCALFS
+      PIO_SCALA_VERSION=2.11.8
+      PIO_SPARK_VERSION=2.1.0
+      PIO_ELASTICSEARCH_VERSION=1.7.3
+    - BUILD_TYPE=Integration
+      METADATA_REP=ELASTICSEARCH EVENTDATA_REP=PGSQL MODELDATA_REP=HDFS
+      PIO_SCALA_VERSION=2.11.8
+      PIO_SPARK_VERSION=2.1.0
+      PIO_ELASTICSEARCH_VERSION=1.7.3
+
+before_install:
+  - unset SBT_OPTS JVM_OPTS
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/1.11.1/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
+
+before_script:
+  - sudo sysctl -w vm.max_map_count=262144
+  - docker-compose -v
+  - ./tests/before_script.travis.sh
+
+script:
+  - ./tests/script.travis.sh
+
+after_script:
+  - ./tests/after_script.travis.sh

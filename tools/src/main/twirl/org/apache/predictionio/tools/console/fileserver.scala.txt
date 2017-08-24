@@ -1,0 +1,8 @@
+Usage: pio fileserver [--ip <value>] [--port <value>] [--max-file-size]
+
+  --ip <value>
+      IP to bind to. Default: 0.0.0.0
+  --port <value>
+      Port to bind to. Default: 7072
+  --max-file-size
+      maximum file size in file upload, Default: 1024M.
