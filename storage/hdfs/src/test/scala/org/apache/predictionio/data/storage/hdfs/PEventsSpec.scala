@@ -3,19 +3,23 @@ package org.apache.predictionio.data.storage.hdfs
 import org.apache.predictionio.data.storage._
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.json4s.DefaultFormats
+import org.json4s.ext.JodaTimeSerializers
 import org.specs2.Specification
 import org.specs2.specification.{Fragments, Step}
+import org.json4s.native.Serialization
+import scala.util.{Failure, Try}
 
 /**
   * Created by xie on 17/8/13.
   */
-class PEventsSpec extends Specification with TestEvents{
+class PEventsSpec extends Specification with TestEvents with Serializable{
 //  System.clearProperty("spark.driver.port")
 //  System.clearProperty("spark.hostPort")
-  val sc = new SparkContext(new SparkConf().setAppName("PEvent test").setMaster("local[2]"))
+  @transient lazy val sc = new SparkContext(new SparkConf().setAppName("PEvent test").setMaster("local[2]"))
 
-  val appId = 1
-  val channelId = 6
+  @transient lazy val appId = 1
+  @transient lazy val channelId = 6
 
   def hdfsLocal = Storage.getDataObject[LEvents](
     "HDFS","hdfs")
@@ -41,10 +45,7 @@ class PEventsSpec extends Specification with TestEvents{
   """
 
   def events(localEventClient: LEvents, parEventClient: PEvents) = sequential ^ s2"""
-
-    - (init test) ${initTest(localEventClient)}
-    - (insert test events) ${insertTestEvents(localEventClient)}
-    find in default ${find(parEventClient)}
+    - write Test ${writeTest(parEventClient)}
   """
 
   val listOfEvents = List(u1e5, u2e2, u1e3, u1e1, u2e3, u2e1, u1e4, u1e2, r1, r2)
@@ -83,6 +84,22 @@ class PEventsSpec extends Specification with TestEvents{
       .map {_.copy(eventId = None)} // ignore eventId
 
     results must containTheSameElementsAs(listOfEventsChannel)
+  }
+
+  def writeTest(parEventClient: PEvents) = {
+    @transient lazy val json4sDefaultFormats = DefaultFormats.lossless ++ JodaTimeSerializers.all
+    @transient lazy implicit val formats = json4sDefaultFormats + new EventJson4sSupport.APISerializer
+    val raw = sc.textFile("/Users/xie/Develop/incubator-predictionio-template-text-classifier/data/stopwords.json")
+    println(raw.count())
+    val rdd = raw.map{ json =>
+      Serialization.read[Event](json)
+    }
+    val pevent = Storage.getPEvents()
+    pevent.write(events = rdd, appId = 10,channelId = Some(0))(sc)
+    println("Events are imported.")
+    println("Done.")
+    val res = 0
+    res must beEqualTo(0)
   }
 
   def aggregateUserProperties(parEventClient: PEvents) = {

@@ -2,19 +2,20 @@ package org.apache.predictionio.data.storage.hdfs
 
 import com.github.nscala_time.time.Imports._
 import org.apache.hadoop.fs.{Path, PathFilter}
+import org.apache.predictionio.data.storage.hdfs.HDFSUtils.dateTimeToString
 import org.apache.predictionio.data.storage.{DataMap, Event, PEvents, StorageClientConfig}
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.functions.{from_utc_timestamp, unix_timestamp}
-import org.json4s.JObject
-import org.json4s.native.Serialization
+import org.json4s.{JArray, JField, JObject, JString}
+import org.json4s.native.{JsonMethods, Serialization}
 
 /**
   * Created by xie on 17/8/10.
   */
-class HDFSPEvents(clientMap: Map[String, AnyRef], config: StorageClientConfig, prefix: String) extends PEvents {
+class HDFSPEvents(@transient clientMap: Map[String, AnyRef], config: StorageClientConfig, prefix: String) extends PEvents {
 
   @transient private implicit lazy val formats = org.json4s.DefaultFormats
   @transient private final lazy val rootPath = clientMap("RootPath").asInstanceOf[String]
@@ -137,16 +138,71 @@ class HDFSPEvents(clientMap: Map[String, AnyRef], config: StorageClientConfig, p
   }
 
   override def write(events: RDD[Event], appId: Int, channelId: Option[Int])(sc: SparkContext): Unit = {
-    logger.warn("HDFSPEvent.write(...) has implemented but not encourage to use!!")
+//    val eventRDD = events.map( x =>
+//      Row(HDFSUtils.generateId,x.event,x.entityType,x.entityId,x.targetEntityType,x.targetEntityId,
+//          x.eventTime,x.tags,x.prId,x.creationTime)
+//    )
+//    val sqlContext = new SQLContext(sc)
+//    val eventDF = sqlContext.createDataFrame(eventRDD,eventSchema)
+    val path = rootPath + s"/app_$appId/channel_${channelId.getOrElse(0)}/${DateTime.now.toString("yyyyMMdd")}/${DateTime.now.toString("HH")}"
+    val name = "ImportData." + DateTime.now.getMillis
+    val savePath = path + "/" + name
+    dataFormat match {
+      case "json" =>
+        events.map{ event =>
+          val obj = JObject(
+            JField("eventId",JString(HDFSUtils.generateId)) ::
+              JField("event", JString(event.event)) ::
+              JField("entityType", JString(event.entityType)) ::
+              JField("entityId", JString(event.entityId)) ::
+              JField("targetEntityType",
+                event.targetEntityType.map(JString(_)).getOrElse(JString(""))) ::
+              JField("targetEntityId",
+                event.targetEntityId.map(JString(_)).getOrElse(JString(""))) ::
+              JField("properties", event.properties.toJObject) ::
+              JField("eventTime", JString(dateTimeToString(event.eventTime))) ::
+              JField("tags", JArray(event.tags.toList.map(JString(_)))) ::
+              JField("prId",
+                event.prId.map(JString(_)).getOrElse(JString(""))) ::
+              JField("creationTime",
+                JString(dateTimeToString(event.creationTime))) ::
+              Nil
+          )
+          obj.toString
+        }.saveAsTextFile(savePath)
+      case "csv" =>
+        val rdd = events.map{ e =>
+          val eventId = HDFSUtils.generateId
+          val event = e.event
+          val entityType = e.entityType
+          val entityId = e.entityId
+          val targetEntityType = e.targetEntityId.getOrElse("")
+          val targetEntityId = e.targetEntityId.getOrElse("")
+          val properties = JsonMethods.compact(JsonMethods.render(e.properties.toJObject))
+          val eventTime = dateTimeToString(e.eventTime)
+          val tags = e.tags.toList.mkString(",")
+          val prId = e.prId.getOrElse("")
+          val creationTime = dateTimeToString(e.creationTime)
+          Seq(eventId,
+              event,
+              entityType,
+              entityId,
+              targetEntityType,
+              targetEntityId,
+              properties,
+              eventTime,
+              tags,
+              prId,
+              creationTime
+          ).mkString("\t")
+        }
+        rdd.saveAsTextFile(savePath)
+      case _ =>
+        logger.error("data format not supported. current only support csv and json")
+    }
 
-    val eventRDD = events.map( x =>
-      Row(HDFSUtils.generateId,x.event,x.entityType,x.entityId,x.targetEntityType,x.targetEntityId,
-          x.eventTime,x.tags,x.prId,x.creationTime)
-    )
-    val sqlContext = new SQLContext(sc)
-    val eventDF = sqlContext.createDataFrame(eventRDD,eventSchema)
-    val savePath = rootPath + s"/app_$appId/channel_${channelId.getOrElse(0)}/${DateTime.now.toString("yyyyMMdd")}/${DateTime.now.toString("HH")}"
-    eventDF.write.format("com.databricks.spark.csv").save(savePath)
+
+
   }
 
   override def delete(eventIds: RDD[String], appId: Int, channelId: Option[Int])(sc: SparkContext): Unit = {

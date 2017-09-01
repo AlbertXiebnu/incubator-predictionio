@@ -27,7 +27,7 @@ libraryDependencies ++= Seq(
   "org.apache.predictionio" %% "apache-predictionio-data" % version.value % "provided",
   "org.apache.spark"        %% "spark-core"     % sparkVersion.value % "provided",
   "org.apache.spark"        %% "spark-sql"      % sparkVersion.value % "provided",
-  "com.databricks" % "spark-csv_2.10" % "1.5.0",
+  "org.json4s"              %% "json4s-ext"     % "3.2.11" % "test",
   "org.scalatest"           %% "scalatest"      % "2.1.7" % "test",
   "org.specs2"              %% "specs2"         % "2.3.13" % "test")
 

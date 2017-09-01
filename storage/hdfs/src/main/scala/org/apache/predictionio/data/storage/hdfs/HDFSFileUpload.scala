@@ -1,6 +1,5 @@
 package org.apache.predictionio.data.storage.hdfs
 
-import java.io.{File, FileInputStream}
 
 import org.apache.hadoop.fs.Path
 import org.apache.predictionio.data.storage.{FileUpload, StorageClientConfig}

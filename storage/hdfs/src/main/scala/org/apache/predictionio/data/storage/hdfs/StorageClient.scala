@@ -42,7 +42,7 @@ class StorageClient(val config: StorageClientConfig) extends BaseStorageClient
   val fs = FileSystem.get(conf)
 //  fs.setWorkingDirectory(new Path("hdfs://0.0.0.0:9000"))
 
-  val client = Map(
+  @transient lazy val client = Map(
     "HDFSClient"->fs,
     "FlumeClient"->flumeHost,
     "RootPath"->rootPath,
