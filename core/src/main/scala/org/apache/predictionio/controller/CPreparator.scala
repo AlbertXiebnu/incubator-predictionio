@@ -3,6 +3,7 @@ package org.apache.predictionio.controller
 import grizzled.slf4j.Logger
 import org.apache.predictionio.core.BasePreparator
 import org.apache.spark.SparkContext
+import org.joda.time.DateTime
 
 import scala.util.{Failure, Success, Try}
 
@@ -15,13 +16,16 @@ import scala.util.{Failure, Success, Try}
 abstract class CPreparator[TD, PD]
   extends BasePreparator[TD, PD]{
   @transient lazy val logger = Logger[this.type]
+  @transient var startTime: Option[DateTime] = None
+  @transient var endTime: Option[DateTime] = None
 
   def prepareBase(sc: SparkContext, td: TD): PD = {
     prepareOrLoad(sc, td)
   }
 
   def prepareOrLoad(sc: SparkContext, td: TD): PD = {
-    val pdata = loadCachePrepare(sc)
+    val path = PathProvider.getPathByTime(baseURL,startTime.getOrElse(DateTime.now()))
+    val pdata = loadCachePrepare(sc,path)
     pdata match {
       case Success(data) =>
         data
@@ -29,7 +33,7 @@ abstract class CPreparator[TD, PD]
         logger.info(e.getMessage)
         logger.info("Cached PrepareData not found, begin to read directly ...")
         val data = prepare(sc,td)
-        writeCachePrepare(sc,data)
+        writeCachePrepare(sc,data,path)
         data
     }
   }
@@ -41,8 +45,9 @@ abstract class CPreparator[TD, PD]
     */
   def prepare(sc: SparkContext, trainingData: TD): PD
 
-  def loadCachePrepare(sc: SparkContext): Try[PD]
+  def loadCachePrepare(sc: SparkContext, path: String): Try[PD]
 
-  def writeCachePrepare(sc: SparkContext, pD: PD): Unit
+  def writeCachePrepare(sc: SparkContext, pD: PD, path: String): Unit
+
 
 }

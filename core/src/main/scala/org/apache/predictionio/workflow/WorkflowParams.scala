@@ -18,6 +18,12 @@
 
 package org.apache.predictionio.workflow
 
+case class AppParams(
+  appId: String = "",
+  channelId: String = "",
+  rootPath: String = ""
+)
+
 /** Workflow parameters.
   *
   * @param batch Batch label of the run.
@@ -33,6 +39,7 @@ case class WorkflowParams(
   batch: String = "",
   verbose: Int = 2,
   saveModel: Boolean = true,
+  appParams: AppParams = AppParams(),
   sparkEnv: Map[String, String] =
     Map[String, String]("spark.executor.extraClassPath" -> "."),
   skipSanityCheck: Boolean = false,
@@ -40,6 +47,6 @@ case class WorkflowParams(
   stopAfterPrepare: Boolean = false) {
   // Temporary workaround for WorkflowParamsBuilder for Java. It doesn't support
   // custom spark environment yet.
-  def this(batch: String, verbose: Int, saveModel: Boolean)
-  = this(batch, verbose, saveModel, Map[String, String]())
+  def this(batch: String, verbose: Int, saveModel: Boolean,appParams: AppParams)
+  = this(batch, verbose, saveModel, appParams, Map[String, String]())
 }

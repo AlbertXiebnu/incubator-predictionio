@@ -18,16 +18,14 @@
 
 package org.apache.predictionio.workflow
 
-import java.net.URI
+import java.net.{MalformedURLException, URI}
 
 import com.github.nscala_time.time.Imports._
 import com.google.common.io.ByteStreams
 import grizzled.slf4j.Logging
 import org.apache.predictionio.controller.Engine
 import org.apache.predictionio.core.BaseEngine
-import org.apache.predictionio.data.storage.EngineInstance
-import org.apache.predictionio.data.storage.EvaluationInstance
-import org.apache.predictionio.data.storage.Storage
+import org.apache.predictionio.data.storage.{EngineInstance, EvaluationInstance, Storage}
 import org.apache.predictionio.workflow.JsonExtractorOption.JsonExtractorOption
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
@@ -36,7 +34,9 @@ import org.json4s.JValue
 import org.json4s.JString
 import org.json4s.native.JsonMethods.parse
 
+import scala.concurrent.Future
 import scala.language.existentials
+import scala.util.{Failure, Success, Try}
 
 object CreateWorkflow extends Logging {
 
@@ -71,6 +71,27 @@ object CreateWorkflow extends Logging {
       case e: java.io.IOException =>
         error(s"Error reading from file: ${e.getMessage}. Aborting workflow.")
         sys.exit(1)
+    }
+  }
+
+  private def getAppParamsWithAccessKey(accesskey: String,channel: Option[String]): Try[AppParams] = {
+    val accessKeyClient = Storage.getMetaDataAccessKeys()
+    val channelsClient = Storage.getMetaDataChannels()
+    val rootPath = "/user/albertxie/pio_root"
+    accessKeyClient.get(accesskey).map{ k =>
+      channel.map { ch =>
+        val channelMap = channelsClient.getByAppid(k.appid)
+          .map(c => (c.name, c.id)).toMap
+        if (channelMap.contains(ch)){
+          Success(AppParams(k.appid.toString,channelMap(ch).toString,rootPath))
+        }else{
+          Failure(new Throwable)
+        }
+      }.getOrElse(
+        Success(AppParams(k.appid.toString,"0",rootPath))
+      )
+    }.getOrElse{
+      Failure(new Throwable)
     }
   }
 
@@ -192,6 +213,31 @@ object CreateWorkflow extends Logging {
             s"${wfc.engineVariant}. Aborting.")
           sys.exit(1)
       }
+      val accessKey = variantJson \ "accessKey" match {
+        case JString(s) => s
+        case _ =>
+          error("Unable to read accessKey from ") +
+            s"${wfc.engineVariant}. Aborting."
+          sys.exit(1)
+      }
+
+      val channel:Option[String] = variantJson \ "channel" match {
+        case JString(s) => Some(s)
+        case _ =>
+          info("Unable to read channel from ") +
+            s"${wfc.engineVariant}. Use default channel."
+          None
+      }
+
+      val appParams = getAppParamsWithAccessKey(accessKey,channel) match {
+        case Success(ap) =>
+          ap
+        case Failure(e) =>
+          error("incorrect accessKey or channel configuration in ") +
+            s"${wfc.engineVariant}. Aborting."
+          sys.exit(1)
+      }
+
       val (engineLanguage, engineFactoryObj) = try {
         WorkflowUtils.getEngine(engineFactory, getClass.getClassLoader)
       } catch {
@@ -205,6 +251,7 @@ object CreateWorkflow extends Logging {
       val customSparkConf = WorkflowUtils.extractSparkConf(variantJson)
       val workflowParams = WorkflowParams(
         verbose = wfc.verbosity,
+        appParams = appParams,
         skipSanityCheck = wfc.skipSanityCheck,
         stopAfterRead = wfc.stopAfterRead,
         stopAfterPrepare = wfc.stopAfterPrepare,

@@ -32,6 +32,9 @@ import org.apache.spark.rdd.RDD
   */
 @DeveloperApi
 abstract class BaseDataSource[TD, EI, Q, A] extends AbstractDoer {
+
+  @transient var baseURL = ""
+
   /** :: DeveloperApi ::
     * Engine developer should not use this directly. This is called by workflow
     * to read training data.

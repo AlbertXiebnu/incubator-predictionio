@@ -32,6 +32,8 @@ import org.apache.spark.SparkContext
 @DeveloperApi
 abstract class BasePreparator[TD, PD]
   extends AbstractDoer {
+  @transient var baseURL = ""
+
   /** :: DeveloperApi ::
     * Engine developers should not use this directly. This is called by training
     * workflow to prepare data before handing it over to algorithm

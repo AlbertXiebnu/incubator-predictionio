@@ -27,16 +27,8 @@ import org.apache.predictionio.core.BaseServing
 import org.apache.predictionio.core.Doer
 import org.apache.predictionio.data.storage.EngineInstance
 import org.apache.predictionio.data.storage.StorageClientException
-import org.apache.predictionio.workflow.CreateWorkflow
-import org.apache.predictionio.workflow.EngineLanguage
+import org.apache.predictionio.workflow._
 import org.apache.predictionio.workflow.JsonExtractorOption.JsonExtractorOption
-import org.apache.predictionio.workflow.NameParamsSerializer
-import org.apache.predictionio.workflow.PersistentModelManifest
-import org.apache.predictionio.workflow.SparkWorkflowUtils
-import org.apache.predictionio.workflow.StopAfterPrepareInterruption
-import org.apache.predictionio.workflow.StopAfterReadInterruption
-import org.apache.predictionio.workflow.WorkflowParams
-import org.apache.predictionio.workflow.WorkflowUtils
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
@@ -147,6 +139,10 @@ class Engine[TD, EI, PD, Q, P, A](
       servingClassMap)
   }
 
+  def getBaseURLByName(name:String,appParams: AppParams): String = {
+    s"${appParams.rootPath}/${name}/app_${appParams.appId}/channel_${appParams.channelId}"
+  }
+
   /** Training this engine would return a list of models.
     *
     * @param sc An instance of SparkContext.
@@ -161,9 +157,11 @@ class Engine[TD, EI, PD, Q, P, A](
       params: WorkflowParams): Seq[Any] = {
     val (dataSourceName, dataSourceParams) = engineParams.dataSourceParams
     val dataSource = Doer(dataSourceClassMap(dataSourceName), dataSourceParams)
+    dataSource.baseURL = getBaseURLByName("datasource",params.appParams)
 
     val (preparatorName, preparatorParams) = engineParams.preparatorParams
     val preparator = Doer(preparatorClassMap(preparatorName), preparatorParams)
+    preparator.baseURL = getBaseURLByName("preparator",params.appParams)
 
     val algoParamsList = engineParams.algorithmParamsList
     require(
