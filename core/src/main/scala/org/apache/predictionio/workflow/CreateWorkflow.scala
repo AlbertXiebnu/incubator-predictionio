@@ -77,21 +77,30 @@ object CreateWorkflow extends Logging {
   private def getAppParamsWithAccessKey(accesskey: String,channel: Option[String]): Try[AppParams] = {
     val accessKeyClient = Storage.getMetaDataAccessKeys()
     val channelsClient = Storage.getMetaDataChannels()
-    val rootPath = "/user/albertxie/pio_root"
-    accessKeyClient.get(accesskey).map{ k =>
-      channel.map { ch =>
-        val channelMap = channelsClient.getByAppid(k.appid)
-          .map(c => (c.name, c.id)).toMap
-        if (channelMap.contains(ch)){
-          Success(AppParams(k.appid.toString,channelMap(ch).toString,rootPath))
-        }else{
-          Failure(new Throwable)
+    val storageConfig = Storage.getConfig("HDFS")
+    storageConfig.map{ config =>
+      val pathOpt = config.properties.get("PATH")
+      pathOpt.map{ path =>
+        accessKeyClient.get(accesskey).map{ k =>
+          channel.map { ch =>
+            val channelMap = channelsClient.getByAppid(k.appid)
+              .map(c => (c.name, c.id)).toMap
+            if (channelMap.contains(ch)){
+              Success(AppParams(k.appid.toString,channelMap(ch).toString,path))
+            }else{
+              Failure(throw new Exception(s"channel: ${ch} not found in appId=${k.appid}. set channel properly"))
+            }
+          }.getOrElse(
+            Success(AppParams(k.appid.toString,"0",path))
+          )
+        }.getOrElse{
+          Failure(throw new Exception("accessKey not found in engine.json. set accessKey in engine.json"))
         }
-      }.getOrElse(
-        Success(AppParams(k.appid.toString,"0",rootPath))
-      )
+      }.getOrElse{
+        Failure(throw new Exception("HDFS source has no PATH property. set PATH property in pio-env.sh"))
+      }
     }.getOrElse{
-      Failure(new Throwable)
+      Failure(throw new Exception("Storage Configuration has no HDFS source. check file: pio-env.sh "))
     }
   }
 
@@ -233,7 +242,8 @@ object CreateWorkflow extends Logging {
         case Success(ap) =>
           ap
         case Failure(e) =>
-          error("incorrect accessKey or channel configuration in ") +
+          error(e.getMessage)
+          error("incorrect configuration in ") +
             s"${wfc.engineVariant}. Aborting."
           sys.exit(1)
       }
