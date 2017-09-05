@@ -23,7 +23,10 @@ package org.apache.predictionio.controller
   *
   * @group Helper
   */
-trait Params extends Serializable {}
+trait Params extends Serializable {
+  var beginDay: String = ""
+  val endDay: String = ""
+}
 
 /** A concrete implementation of [[Params]] representing empty parameters.
   *

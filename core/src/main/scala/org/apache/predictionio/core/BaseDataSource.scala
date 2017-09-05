@@ -43,7 +43,7 @@ abstract class BaseDataSource[TD, EI, Q, A] extends AbstractDoer {
     * @return Training data
     */
   @DeveloperApi
-  def readTrainingBase(sc: SparkContext): TD
+  def readTrainingBase(sc: SparkContext): Seq[TD]
 
   /** :: DeveloperApi ::
     * Engine developer should not use this directly. This is called by

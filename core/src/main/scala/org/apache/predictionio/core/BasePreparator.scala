@@ -43,5 +43,5 @@ abstract class BasePreparator[TD, PD]
     * @return Prepared data
     */
   @DeveloperApi
-  def prepareBase(sc: SparkContext, td: TD): PD
+  def prepareBase(sc: SparkContext, td: Seq[TD]): PD
 }

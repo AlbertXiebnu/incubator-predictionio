@@ -123,7 +123,7 @@ object FastEvalEngineWorkflow  {
       val result = getDataSourceResult(
         workflow = workflow,
         prefix = new DataSourcePrefix(prefix))
-      .mapValues { case (td, _, _) => preparator.prepareBase(workflow.sc, td) }
+      .mapValues { case (td, _, _) => preparator.prepareBase(workflow.sc, Seq(td)) }
 
       cache += Tuple2(prefix, result)
     }

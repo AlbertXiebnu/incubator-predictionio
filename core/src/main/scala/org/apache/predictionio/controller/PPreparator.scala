@@ -33,7 +33,7 @@ import org.apache.spark.SparkContext
 abstract class PPreparator[TD, PD]
   extends BasePreparator[TD, PD] {
 
-  def prepareBase(sc: SparkContext, td: TD): PD = {
+  def prepareBase(sc: SparkContext, td: Seq[TD]): PD = {
     prepare(sc, td)
   }
 
@@ -43,5 +43,5 @@ abstract class PPreparator[TD, PD]
     * @param sc An Apache Spark context.
     * @param trainingData Training data to be prepared.
     */
-  def prepare(sc: SparkContext, trainingData: TD): PD
+  def prepare(sc: SparkContext, trainingData: Seq[TD]): PD
 }

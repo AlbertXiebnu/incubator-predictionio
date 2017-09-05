@@ -32,7 +32,7 @@ import scala.reflect._
   * @group Preparator
   */
 class IdentityPreparator[TD] extends BasePreparator[TD, TD] {
-  def prepareBase(sc: SparkContext, td: TD): TD = td
+  def prepareBase(sc: SparkContext, td: Seq[TD]): TD = td.head
 }
 
 /** Companion object of [[IdentityPreparator]] that conveniently returns an

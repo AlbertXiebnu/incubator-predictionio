@@ -38,12 +38,13 @@ import scala.reflect._
 abstract class LDataSource[TD: ClassTag, EI, Q, A]
   extends BaseDataSource[RDD[TD], EI, Q, A] {
 
-  def readTrainingBase(sc: SparkContext): RDD[TD] = {
-    sc.parallelize(Seq(None)).map(_ => readTraining())
+  def readTrainingBase(sc: SparkContext): Seq[RDD[TD]] = {
+//    sc.parallelize(Seq(None)).map(_ => readTraining())
+    readTraining().map(d => sc.parallelize(Seq(None)).map(_ => d))
   }
 
   /** Implement this method to only return training data from a data source */
-  def readTraining(): TD
+  def readTraining(): Seq[TD]
 
   def readEvalBase(sc: SparkContext): Seq[(RDD[TD], EI, RDD[(Q, A)])] = {
     val localEvalData: Seq[(TD, EI, Seq[(Q, A)])] = readEval()

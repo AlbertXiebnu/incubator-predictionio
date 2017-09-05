@@ -757,7 +757,7 @@ object Engine {
       .mapValues{ _.zipWithUniqueId().map(_.swap) }
 
     val preparedMap: Map[EX, PD] = evalTrainMap.mapValues { td => {
-      preparator.prepareBase(sc, td)
+      preparator.prepareBase(sc, Seq(td))
     }}
 
     val algoModelsMap: Map[EX, Map[AX, Any]] = preparedMap.mapValues { pd => {
